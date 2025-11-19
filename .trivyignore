@@ -1,0 +1,6 @@
+# Trivy ignore file for known false positives
+# Add CVE IDs here that are false positives or accepted risks
+
+# Example (remove if not needed):
+# CVE-2024-1234
+
