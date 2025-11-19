@@ -1,0 +1,11 @@
+target/
+.idea/
+.vscode/
+*.iml
+*.log
+.DS_Store
+
+# Local secrets
+config/datasource-secrets.yml
+.env
+

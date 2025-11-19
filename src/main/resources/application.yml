@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: billing-consumer-service
+  config:
+    import: optional:file:./config/datasource-secrets.yml
+  datasource:
+    url: ${BILLING_DB_URL:jdbc:h2:mem:billingdb;MODE=LEGACY;DB_CLOSE_DELAY=-1}
+    driver-class-name: ${BILLING_DB_DRIVER:org.h2.Driver}
+    username: ${BILLING_DB_USERNAME:billing_consumer_app}
+    password: ${BILLING_DB_PASSWORD:billing_consumer_secret}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+encryption:
+  # Must be provided via AWS Secrets Manager / GitHub Secret (ENCRYPTION_SECRET)
+  secret: ${ENCRYPTION_SECRET:?ENCRYPTION_SECRET must be provided}
+
+logging:
+  level:
+    com.summithc.billing: INFO
+
