@@ -19,7 +19,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <sonar.organization>summithc</sonar.organization>
+        <sonar.organization>anup-az</sonar.organization>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
         <jacoco.version>0.8.11</jacoco.version>
     </properties>
