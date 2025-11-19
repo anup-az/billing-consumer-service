@@ -1,0 +1,190 @@
+name: Deploy to GCP Dev Environment
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+env:
+  GCP_PROJECT_ID: hybrid-dolphin-478706-q8
+  GCP_REGION: asia-south1
+  SERVICE_NAME: billing-consumer-service
+  ARTIFACT_REGISTRY_REPO: billing-consumer-repo
+
+jobs:
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # Required for Workload Identity Federation
+    
+    outputs:
+      image_tag: ${{ steps.image_tag.outputs.tag }}
+      image_url: ${{ steps.image_tag.outputs.url }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      
+      - name: Run tests
+        run: mvn -B clean test
+        env:
+          ENCRYPTION_SECRET: ${{ secrets.ENCRYPTION_SECRET }}
+      
+      - name: Build JAR
+        run: mvn -B package -DskipTests
+        env:
+          ENCRYPTION_SECRET: ${{ secrets.ENCRYPTION_SECRET }}
+      
+      # Authenticate to GCP using Workload Identity Federation
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+      
+      - name: Generate image tag
+        id: image_tag
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          TAG="dev-${SHORT_SHA}-$(date +%s)"
+          IMAGE_URL="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.SERVICE_NAME }}"
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "url=${IMAGE_URL}" >> $GITHUB_OUTPUT
+          echo "full_image=${IMAGE_URL}:${TAG}" >> $GITHUB_OUTPUT
+      
+      - name: Build and push Docker image
+        run: |
+          docker build -t ${{ steps.image_tag.outputs.full_image }} .
+          docker tag ${{ steps.image_tag.outputs.full_image }} ${{ steps.image_tag.outputs.url }}:latest
+          docker push ${{ steps.image_tag.outputs.full_image }}
+          docker push ${{ steps.image_tag.outputs.url }}:latest
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-context
+          path: |
+            terraform/
+            .terraform.lock.hcl
+          retention-days: 1
+
+  terraform-deploy:
+    name: Deploy with Terraform
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download Terraform files
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-context
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+      
+      - name: Terraform Init
+        working-directory: terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.GCP_TERRAFORM_STATE_BUCKET }}" \
+            -backend-config="prefix=billing-consumer/dev"
+      
+      - name: Terraform Plan
+        working-directory: terraform
+        run: |
+          terraform plan \
+            -var="project_id=${{ env.GCP_PROJECT_ID }}" \
+            -var="region=${{ env.GCP_REGION }}" \
+            -var="environment=dev" \
+            -var="image_tag=${{ needs.build-and-push.outputs.image_tag }}" \
+            -out=tfplan
+      
+      - name: Terraform Apply
+        working-directory: terraform
+        run: terraform apply -auto-approve tfplan
+      
+      - name: Get service URL
+        id: service_url
+        working-directory: terraform
+        run: |
+          SERVICE_URL=$(terraform output -raw service_url)
+          echo "url=${SERVICE_URL}" >> $GITHUB_OUTPUT
+          echo "### 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Service URL:** ${SERVICE_URL}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tag:** ${{ needs.build-and-push.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** dev" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Health check
+        run: |
+          echo "Waiting for service to be ready..."
+          sleep 30
+          curl -f ${{ steps.service_url.outputs.url }}/actuator/health || echo "Health check endpoint not ready yet"
+
+  notify:
+    name: Deployment Notification
+    runs-on: ubuntu-latest
+    needs: [build-and-push, terraform-deploy]
+    if: always()
+    steps:
+      - name: Deployment Status
+        run: |
+          if [[ "${{ needs.terraform-deploy.result }}" == "success" ]]; then
+            echo "✅ Deployment to dev environment successful!"
+          else
+            echo "❌ Deployment to dev environment failed!"
+            exit 1
+          fi
+

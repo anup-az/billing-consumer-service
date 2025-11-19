@@ -1,0 +1,47 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.idea
+.vscode
+*.iml
+*.iws
+*.ipr
+
+# Maven
+target/
+.mvn/
+mvnw
+mvnw.cmd
+
+# Documentation
+*.md
+docs/
+
+# CI/CD
+.github/
+.circleci/
+
+# Terraform
+terraform/
+*.tfstate
+*.tfstate.backup
+.terraform/
+
+# Config files (secrets should be in Secret Manager)
+config/datasource-secrets.yml
+config/db-secrets.yml
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tests
+src/test/
+
