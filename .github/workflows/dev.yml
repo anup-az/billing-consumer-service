@@ -1,0 +1,37 @@
+name: CI (dev)
+
+on:
+  push:
+    branches: [ dev ]
+  pull_request:
+    branches: [ dev ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Build and Test Spring Boot Application
+        run: mvn -B clean verify
+        env:
+          ENCRYPTION_SECRET: ${{ secrets.ENCRYPTION_SECRET }}
+          BILLING_DB_URL: jdbc:h2:mem:ci;MODE=LEGACY;DB_CLOSE_DELAY=-1
+          BILLING_DB_DRIVER: org.h2.Driver
+          BILLING_DB_USERNAME: sa
+          BILLING_DB_PASSWORD: ""
+
