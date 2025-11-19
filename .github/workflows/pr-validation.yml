@@ -22,14 +22,14 @@ jobs:
           head: HEAD
           extra_args: --only-verified
 
-      - name: GitGuardian Secret Scan
-        uses: GitGuardian/ggshield-action@v1
-        continue-on-error: true
-        if: secrets.GITGUARDIAN_API_KEY != ''
-        env:
-          GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
-        with:
-          args: secret scan path . --recursive --show-secrets
+      # GitGuardian scan (optional - requires GITGUARDIAN_API_KEY secret)
+      # Uncomment when ready:
+      # - name: GitGuardian Secret Scan
+      #   uses: GitGuardian/ggshield-action@v1
+      #   env:
+      #     GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
+      #   with:
+      #     args: secret scan path . --recursive --show-secrets
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
@@ -81,7 +81,6 @@ jobs:
           ENCRYPTION_SECRET: ${{ secrets.ENCRYPTION_SECRET }}
 
       - name: SonarQube Scan
-        if: secrets.SONAR_TOKEN != '' && secrets.SONAR_HOST_URL != ''
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
@@ -93,7 +92,6 @@ jobs:
             -Dsonar.qualitygate.wait=true
 
       - name: Check SonarQube Quality Gate
-        if: secrets.SONAR_TOKEN != '' && secrets.SONAR_HOST_URL != ''
         uses: sonarsource/sonarqube-quality-gate-action@master
         timeout-minutes: 5
         env:
@@ -115,16 +113,14 @@ jobs:
 
       - name: Run Snyk Security Scan
         uses: snyk/actions/maven@master
-        continue-on-error: true
-        if: secrets.SNYK_TOKEN != ''
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --severity-threshold=high
+          args: --severity-threshold=high --sarif-file-output=snyk.sarif
 
       - name: Upload Snyk results to GitHub
         uses: github/codeql-action/upload-sarif@v3
-        if: always() && hashFiles('snyk.sarif') != ''
+        if: always()
         with:
           sarif_file: snyk.sarif
 
@@ -187,18 +183,12 @@ jobs:
           echo "Dependency Check: ${{ needs.dependency-check.result }}"
           echo "Build Validation: ${{ needs.build-validation.result }}"
           
-          # Only fail if build-validation fails (core requirement)
-          if [[ "${{ needs.build-validation.result }}" != "success" ]]; then
-            echo "❌ Build validation failed - PR blocked"
-            exit 1
-          fi
-          
-          # Warn but don't block on other checks
           if [[ "${{ needs.security-scan.result }}" != "success" ]] || \
              [[ "${{ needs.code-quality.result }}" != "success" ]] || \
-             [[ "${{ needs.dependency-check.result }}" != "success" ]]; then
-            echo "⚠️  Some quality gates failed but not blocking merge"
-            echo "✅ Build passed - PR can be merged"
+             [[ "${{ needs.dependency-check.result }}" != "success" ]] || \
+             [[ "${{ needs.build-validation.result }}" != "success" ]]; then
+            echo "❌ One or more quality gates failed"
+            exit 1
           else
             echo "✅ All quality gates passed - PR ready to merge!"
           fi
