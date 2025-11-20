@@ -9,14 +9,5 @@ target/
 config/datasource-secrets.yml
 .env
 
-# Terraform
-.terraform/
-*.tfstate
-*.tfstate.*
-*.tfvars.backup
-.terraform.lock.hcl
-terraform.tfvars.local
-
-# Docker
-*.tar
-.dockerignore.bak
+# Local hooks (visible but not committed)
+.hooks/

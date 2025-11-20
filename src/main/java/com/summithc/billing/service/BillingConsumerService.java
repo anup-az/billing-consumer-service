@@ -24,7 +24,6 @@ public class BillingConsumerService {
     @Transactional
     public BillingConsumerResponse createConsumer(BillingConsumerRequest request) {
         log.debug("Creating billing consumer for user: {}", request.getUserName());
-        System.out.println("DEBUG: Creating consumer for " + request.getUserName());
         
         BillingConsumer consumer = new BillingConsumer();
         consumer.setUserName(request.getUserName());

@@ -1,0 +1,83 @@
+# Cursor IDE Rules - Spring Boot Billing Consumer Service
+
+## Code Style and Standards
+
+### Java Code Rules
+- Use Java 21 features
+- Follow Spring Boot 3.x best practices
+- Use Lombok annotations (@RequiredArgsConstructor, @Getter, @Setter, @Builder)
+- Use SLF4J for logging (never System.out.println or printStackTrace)
+- All service methods that modify data must have @Transactional
+- All controller request parameters must have @Valid annotation
+- Use Optional for nullable return types
+
+### Security Rules (CRITICAL)
+- NEVER hardcode secrets, passwords, API keys, or tokens
+- Always use @Value("${ENV_VAR}") or environment variables
+- Sensitive fields (password, ssn, medical data) must use @Convert with encryption
+- All SQL queries must use JPA/Hibernate - no string concatenation
+- All external inputs must be validated with @Valid, @NotNull, @NotBlank
+
+### Exception Handling
+- Never use empty catch blocks
+- Never catch generic Exception unless in GlobalExceptionHandler
+- Always log exceptions with log.error("message", exception)
+- Use try-with-resources for all closeable resources
+
+### Architecture Rules
+- Controllers only handle HTTP concerns - delegate to Services
+- Services contain business logic - use @Transactional
+- Repositories only for data access
+- Never expose Entity classes in API responses - always use DTOs
+- All API endpoints must be versioned: /api/v1/...
+
+### Naming Conventions
+- Classes: PascalCase (BillingConsumerService)
+- Methods: camelCase (createConsumer)
+- Constants: UPPER_SNAKE_CASE (MAX_RETRY_COUNT)
+- Packages: lowercase (com.summithc.billing)
+- Test methods: methodName_scenario_expectedResult
+
+### Code Quality
+- Maximum method length: 50 lines
+- Methods should do one thing only
+- Avoid deeply nested code (max 3 levels)
+- Use meaningful variable names (no single letters except loop counters)
+- Add null checks or use Optional to prevent NullPointerException
+
+### Configuration
+- All environment-specific values must use ${ENV_VAR:default}
+- Never commit secrets in application.yml or properties files
+- Use datasource-secrets.yml (gitignored) for local database credentials
+
+### Testing
+- Unit tests must not connect to real databases (use H2 or mocks)
+- Test coverage minimum 80% for Service layer
+- Use @DataJpaTest for repository tests
+- Use @MockBean for service tests
+
+### Documentation
+- Public API endpoints must have clear Javadoc
+- Complex business logic must have explanatory comments
+- README must be updated when adding new features
+
+### Git Commit Messages
+- Follow conventional commits: type(scope): description
+- Valid types: feat, fix, docs, refactor, test, chore, style, perf, ci, build
+- Examples: "feat(billing): add consumer creation API"
+
+### Dependencies
+- Never use SNAPSHOT versions in pom.xml
+- Keep dependencies updated to avoid security vulnerabilities
+- Only add necessary dependencies - avoid bloat
+
+## When Writing Code
+
+When I ask you to write or modify code:
+1. Check these rules first
+2. Apply security rules strictly
+3. Use proper error handling
+4. Write clean, maintainable code
+5. Add appropriate logging
+6. Follow the architecture patterns established in this project
+
