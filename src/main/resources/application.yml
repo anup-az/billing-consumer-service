@@ -14,10 +14,11 @@ spring:
     open-in-view: false
     properties:
       hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
 
 encryption:
-  # Must be provided via AWS Secrets Manager / GitHub Secret (ENCRYPTION_SECRET)
+  # Must be provided via GCP Secret Manager / GitHub Secret (ENCRYPTION_SECRET)
   secret: ${ENCRYPTION_SECRET:?ENCRYPTION_SECRET must be provided}
 
 logging:

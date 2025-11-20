@@ -7,11 +7,13 @@ import com.summithc.billing.entity.BillingConsumer;
 import com.summithc.billing.repository.BillingConsumerRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Objects;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BillingConsumerService {
@@ -21,6 +23,8 @@ public class BillingConsumerService {
 
     @Transactional
     public BillingConsumerResponse createConsumer(BillingConsumerRequest request) {
+        log.debug("Creating billing consumer for user: {}", request.getUserName());
+        
         BillingConsumer consumer = new BillingConsumer();
         consumer.setUserName(request.getUserName());
         consumer.setAge(request.getAge());
@@ -30,15 +34,22 @@ public class BillingConsumerService {
         consumer.setPassword(encryptionService.encrypt(request.getPassword()));
         consumer.setMedicalHistory(encryptionService.encrypt(request.getMedicalHistory()));
         consumer.setNationalId(encryptionService.encrypt(request.getNationalId()));
+        
         BillingConsumer saved = repository.save(consumer);
+        log.debug("Consumer created successfully with ID: {}", saved.getId());
+        
         return toResponse(saved);
     }
 
     @Transactional(readOnly = true)
     public BillingConsumerResponse getConsumer(Long id) {
         Objects.requireNonNull(id, "id must not be null");
+        log.debug("Fetching consumer with ID: {}", id);
+        
         BillingConsumer consumer = repository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("BillingConsumer not found: " + id));
+        
+        log.debug("Consumer retrieved: {}", consumer.getUserName());
         return toResponse(consumer);
     }
 

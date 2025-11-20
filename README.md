@@ -1,14 +1,15 @@
 # Billing Consumer Service
 
-Minimal Spring Boot 3 (Java 21) microservice that stores `BillingConsumer` records with mandatory encryption for sensitive fields while keeping the codebase lean.
+Production-ready Spring Boot 3 (Java 21) microservice for managing `BillingConsumer` records with enterprise-grade security and validation.
 
 ## Features
 
-- POST + GET REST APIs covering basic CRUD entry points
+- REST APIs for consumer management (POST, GET endpoints)
 - AES/GCM field-level encryption for `password`, `medicalHistory`, and `nationalId`
-- Database credentials externalised via `config/datasource-secrets.yml` (never committed)
-- Ready for future GitHub Actions → AWS App Runner/App Service + Terraform deployment
-- Designed with secret-scanning/SonarQube enablement in mind (no hard-coded secrets)
+- **3-Level Validation System** (Pre-commit hooks, TruffleHog, SonarQube)
+- Database credentials externalized via environment variables and secret management
+- Comprehensive GitHub Actions CI/CD with quality gates
+- Production-ready code standards enforced automatically
 
 ## Tech Stack
 
@@ -16,7 +17,9 @@ Minimal Spring Boot 3 (Java 21) microservice that stores `BillingConsumer` recor
 - Spring Data JPA + H2 (swap with managed DB later)
 - Lombok for minimal boilerplate
 
-## Getting Started
+## Quick Start
+
+### 1. Run the Application
 
 ```bash
 ./mvnw spring-boot:run
@@ -88,11 +91,21 @@ Add unit tests as business rules grow. For now you can validate manually:
 mvn test
 ```
 
-## Security Checklist
+## Validation (3 Layers)
 
-- [x] No secrets in source
-- [x] Sensitive fields encrypted at rest and in API payloads
-- [x] Ready for GitHub Actions secret scanning & SonarQube gates
+1. **Cursor IDE** - `.cursorrules` (real-time code suggestions)
+2. **Git Commit** - `.hooks/pre-commit` (validates before commit)
+3. **GitHub PR** - TruffleHog + Trivy + SonarQube
 
-Happy building!
+**Commit format:** `type(scope): description`  
+Example: `feat(billing): add consumer API`
+
+## GitHub Actions
+
+- **CI (dev):** `.github/workflows/dev.yml` - Build & test on dev branch
+- **PR Validation:** `.github/workflows/pr-validation.yml` - TruffleHog, Trivy, SonarQube, Build & Test
+
+All PRs must pass quality gates before merge.
+
+Happy building! 🚀
 

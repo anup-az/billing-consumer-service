@@ -1,0 +1,99 @@
+{
+  "name": "Billing Consumer Service - Commit Validation Rules",
+  "version": "1.0.0",
+  "description": "Automatic validation rules triggered on git commit",
+  "rules": [
+    {
+      "id": "no-hardcoded-secrets",
+      "severity": "error",
+      "pattern": "(password|passwd|pwd|secret|api[_-]?key|apikey|token)\\s*=\\s*[\"'][^\"'$\\{]+[\"']",
+      "fileTypes": [".java", ".yml", ".yaml", ".properties"],
+      "excludePaths": ["test/", ".template.", ".example."],
+      "message": "❌ Hardcoded secret detected. Use environment variables: @Value(\"${ENV_VAR}\")",
+      "autoFix": false
+    },
+    {
+      "id": "no-system-out-println",
+      "severity": "error",
+      "pattern": "System\\.out\\.print",
+      "fileTypes": [".java"],
+      "excludePaths": ["test/"],
+      "message": "❌ System.out.println found. Use SLF4J logger: log.info() or log.debug()",
+      "autoFix": false
+    },
+    {
+      "id": "no-printstacktrace",
+      "severity": "error",
+      "pattern": "\\.printStackTrace\\(\\)",
+      "fileTypes": [".java"],
+      "excludePaths": ["test/"],
+      "message": "❌ printStackTrace() found. Use logger: log.error(\"message\", exception)",
+      "autoFix": false
+    },
+    {
+      "id": "no-empty-catch",
+      "severity": "error",
+      "pattern": "catch\\s*\\([^)]+\\)\\s*\\{\\s*\\}",
+      "fileTypes": [".java"],
+      "message": "❌ Empty catch block found. Handle exception or rethrow",
+      "autoFix": false
+    },
+    {
+      "id": "no-snapshot-dependencies",
+      "severity": "error",
+      "pattern": "SNAPSHOT",
+      "fileTypes": ["pom.xml"],
+      "message": "❌ SNAPSHOT dependency found. Use release version",
+      "autoFix": false
+    },
+    {
+      "id": "no-sql-concatenation",
+      "severity": "error",
+      "pattern": "\"SELECT.*\\+",
+      "fileTypes": [".java"],
+      "message": "❌ SQL concatenation detected. Use JPA/Hibernate parameterized queries",
+      "autoFix": false
+    },
+    {
+      "id": "no-hardcoded-urls",
+      "severity": "error",
+      "pattern": "(url|host|endpoint):\\s*https?://[^$\\{]",
+      "fileTypes": ["application.yml", "application.yaml"],
+      "excludePaths": [".template.", ".example."],
+      "message": "❌ Hardcoded URL found. Use environment variable: ${URL_VAR}",
+      "autoFix": false
+    },
+    {
+      "id": "conventional-commits",
+      "severity": "error",
+      "type": "commit-message",
+      "pattern": "^(feat|fix|docs|style|refactor|test|chore|perf|ci|build)(\\(.+\\))?:\\s.+",
+      "message": "❌ Invalid commit message format.\nRequired: type(scope): description\nExamples:\n  feat(billing): add consumer API\n  fix(security): resolve SQL injection",
+      "autoFix": false
+    },
+    {
+      "id": "require-transactional",
+      "severity": "warning",
+      "pattern": "public\\s+\\w+\\s+(save|update|delete|create)",
+      "fileTypes": ["*Service.java"],
+      "requireAnnotation": "@Transactional",
+      "message": "⚠️  Service write method missing @Transactional annotation",
+      "autoFix": false
+    },
+    {
+      "id": "require-valid-annotation",
+      "severity": "warning",
+      "pattern": "@RequestBody",
+      "fileTypes": ["*Controller.java"],
+      "requireBefore": "@Valid",
+      "message": "⚠️  @RequestBody should have @Valid annotation for input validation",
+      "autoFix": false
+    }
+  ],
+  "enforcement": {
+    "blockCommit": true,
+    "allowWarnings": false,
+    "showFixSuggestions": true
+  }
+}
+
